@@ -50,6 +50,16 @@ fn do_bench_merge(c: &mut Criterion, num_relations: u64, relation_len: u64) {
                         }
                     )
                 }
+                MergeStrategy::MultiMerge => {
+                    b.iter_with_setup(
+                        move || {
+                            generate_relations(num_relations, relation_len)
+                        },
+                        |data| {
+                            Relation::multi_merge(data)
+                        }
+                    )
+                }
             }
         },
         [MergeStrategy::Individual, MergeStrategy::MultiMerge].iter()
