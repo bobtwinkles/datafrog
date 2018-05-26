@@ -8,3 +8,11 @@ readme = "README.md"
 keywords = ["datalog", "analysis"]
 
 [dependencies]
+
+[dev-dependencies]
+rand = "0.5.0"
+criterion = "0.2"
+
+[[bench]]
+name = "merge_benches"
+harness = false
