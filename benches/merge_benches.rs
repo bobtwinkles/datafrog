@@ -11,6 +11,7 @@ use datafrog::Relation;
 #[derive(Debug,Copy,Clone)]
 enum MergeStrategy {
     Individual,
+    MultiMerge,
 }
 
 fn generate_relations(num_relations: u64, relation_len: u64) -> Vec<Relation<u64>> {
@@ -51,7 +52,7 @@ fn do_bench_merge(c: &mut Criterion, num_relations: u64, relation_len: u64) {
                 }
             }
         },
-        [MergeStrategy::Individual].iter()
+        [MergeStrategy::Individual, MergeStrategy::MultiMerge].iter()
     ));
 }
 

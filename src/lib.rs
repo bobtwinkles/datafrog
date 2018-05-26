@@ -15,6 +15,9 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::cmp::Ordering;
 
+#[cfg(test)]
+mod test;
+
 mod map;
 mod join;
 
@@ -81,6 +84,64 @@ impl<Tuple: Ord> Relation<Tuple> {
         }
 
         Relation { elements }
+    }
+
+    /// Merge multiple relations together at once. Potentially more efficient than
+    /// individually merging relations together
+    pub fn multi_merge<I>(items: I) -> Self where I: IntoIterator<Item=Self> {
+        let mut tot_size = 0;
+        let mut relation_iterators: Vec<_> = items
+            .into_iter()
+            .filter_map(|x| {
+                // Collect iterators over all the input relations, filtering out
+                // things with zero size immediately and tracking the total
+                // number of elements
+                tot_size += x.elements.len();
+                if x.elements.len() > 0 {
+                    Some(x.elements.into_iter().peekable())
+                } else{
+                    None
+                }
+            })
+            .collect();
+
+        let mut output = Vec::with_capacity(tot_size);
+
+        macro_rules! compute_min {
+            {} => {{
+                let mut it = relation_iterators.iter_mut().enumerate();
+                let v = it.next().unwrap();
+                let v = (v.0, v.1.peek().unwrap());
+                it.fold(v, |prev, curr| {
+                    let v = curr.1.peek().unwrap();
+                    if prev.1 > v {
+                        (curr.0, v)
+                    } else {
+                        prev
+                    }
+                }).0
+            }}
+        }
+
+        // Prime the output relation by pushing the first element
+        let min_idx = compute_min!();
+        output.push(relation_iterators[min_idx].next().unwrap());
+        if relation_iterators[min_idx].peek().is_none() {
+            relation_iterators.swap_remove(min_idx).peek();
+        }
+
+        while relation_iterators.len() > 0 {
+            let min_idx = compute_min!();
+            let v = relation_iterators[min_idx].next().unwrap();
+            if v != output[output.len() - 1] {
+                output.push(v);
+            }
+            if relation_iterators[min_idx].peek().is_none() {
+                relation_iterators.swap_remove(min_idx).peek();
+            }
+        }
+
+        Self { elements: output }
     }
 
     fn from_vec(mut elements: Vec<Tuple>) -> Self {
